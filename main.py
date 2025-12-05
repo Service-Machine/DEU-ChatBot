@@ -2,9 +2,8 @@ import tkinter as tk
 from tkinter import scrolledtext, Toplevel
 from PIL import Image, ImageTk
 import os
-import openai
+from openai import OpenAI
 from dotenv import load_dotenv
-import webbrowser
 
 # LangChain/RAG 관련 라이브러리
 from langchain_text_splitters import CharacterTextSplitter
@@ -12,6 +11,9 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders import TextLoader
 
+load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+openai_client = OpenAI(api_key=API_KEY)
 
 class DongeuiChatbotGUI:
     def __init__(self):
@@ -29,54 +31,39 @@ class DongeuiChatbotGUI:
             "수강신청": "수강신청은 매 학기 초 학사일정을 확인하세요."
         }
 
-        # === AI/RAG 관련 초기화 ===
-        self.openai_client = None
+        # === AI/RAG 관련 초기화
+        self.openai_client = openai_client
         self.vectorstore = None
 
-        print("1. DongeuiChatbotGUI 초기화 시작")
-        self.initialize_openai()
+
+
+        print("DongeuiChatbotGUI 초기화 시작")
         self.initialize_rag()
         self.setup_gui()
-        print("4. GUI 설정 완료, mainloop 대기 중")
+        print("GUI 설정 완료, mainloop 대기 중")
 
 
-
-    def initialize_openai(self):
-        """OpenAI 클라이언트를 초기화합니다."""
-
-        # 실제 발급받은 모델 API Key 입력
-        load_dotenv()
-        api_key = os.getenv("OPENAI_API_KEY")
-        try:
-            self.openai_client = openai.OpenAI(api_key=api_key)
-            print("2. OpenAI 클라이언트 초기화 성공")
-        except Exception as e:
-            print(f"OpenAI 클라이언트 초기화 오류: {e}")
-            self.openai_client = None
-
-
+   # RAG를 위한 벡터 데이터베이스를 초기화하고 문서를 로드
     def initialize_rag(self):
-        """RAG를 위한 벡터 데이터베이스를 초기화하고 문서를 로드"""
         knowledge_file = "deu_knowledge.txt"
         if not os.path.exists(knowledge_file):
-            print(f"⚠️ RAG 지식 파일 '{knowledge_file}'을 찾을 수 없습니다. RAG 기능 비활성화.")
+            print(f"지식 파일 '{knowledge_file}' 없음, RAG 비활성화")
             return
 
-        if not openai.api_key or openai.api_key == "YOUR_OPENAI_API_KEY_HERE":
-            print("⚠️ OpenAI API 키가 설정되지 않아 RAG 초기화를 건너뜁니다.")
+        if not API_KEY:
+            print("API키 없음, RAG 비활성화")
             return
 
         try:
-            # 문서 로드 및 분할
             loader = TextLoader(knowledge_file, encoding='utf-8')
             documents = loader.load()
             text_splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=0)
             texts = text_splitter.split_documents(documents)
 
-            # 임베딩 및 벡터스토어 생성
-            embeddings = OpenAIEmbeddings(openai_api_key=openai.api_key)
+            embeddings = OpenAIEmbeddings(openai_api_key=API_KEY)
             self.vectorstore = Chroma.from_documents(texts, embeddings)
-            print("3. RAG 벡터 데이터베이스 초기화 성공")
+
+            print("RAG 초기화 성공")
 
         except Exception as e:
             print(f"RAG 초기화 오류: {e}")
@@ -111,12 +98,11 @@ class DongeuiChatbotGUI:
         if context:
             system_message += f"\n[CONTEXT]\n{context}\n[/CONTEXT]"
 
-
+        # gpt에게 어떤 성격으로 어떻게 말해야하고 어떤 정보 위주로 답해야하는지 설정
         messages = [
-            {"role": "system", "content": system_message},      # gpt에게 어떤 성격으로 어떻게 말해야하고 어떤 정보 위주로 답해야하는지 설정
-            {"role": "user", "content": user_prompt}            # 유저가 질문한 내용
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_prompt}
         ]
-
 
         try:
             response = self.openai_client.chat.completions.create(
@@ -166,9 +152,8 @@ class DongeuiChatbotGUI:
 
         self.add_message(self.bot_name, "반갑습니다 20,000 효민인 여러분!! 무엇을 도와드릴까요?")
 
-
+    # 이미지 파일을 다양한 확장자로 찾기
     def find_image_file(self, base_name):
-        """이미지 파일을 다양한 확장자로 찾기"""
         extensions = ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']
         for ext in extensions:
             file_path = base_name + ext
@@ -210,7 +195,6 @@ class DongeuiChatbotGUI:
             self.add_message(self.bot_name, f"캠퍼스 지도를 표시하는 중 오류가 발생했습니다: {str(e)}")
             if 'map_window' in locals():
                 map_window.destroy()
-
 
     def show_bonggwan_direction(self):
         try:
