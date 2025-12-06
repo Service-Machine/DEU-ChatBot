@@ -48,7 +48,7 @@ class OpenAIChatBot():
 
     # Rag 생성
     def InitRag(self):
-        knowledge_file = "deu_knowledge.txt"
+        knowledge_file = "../deu_knowledge.txt"
 
         # 디버깅 용
         if not os.path.exists(knowledge_file):

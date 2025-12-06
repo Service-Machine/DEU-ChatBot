@@ -1,9 +1,9 @@
 import tkinter as tk
 import threading
 
-from APIConnect import OpenAIChatBot
-from GetMap import GetMap
-from GuiSetUp import Gui
+from Code.APIConnect import OpenAIChatBot
+from Code.GetMap import GetMap
+from Code.GuiSetUp import Gui
 
 
 class DongeuiChatbotApp:
